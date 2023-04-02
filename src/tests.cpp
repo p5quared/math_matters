@@ -17,27 +17,27 @@ TEST_CASE("Valid Characters", "[checkValidCharacters] [sanitization]")
 {
     using namespace psv;
     // equations with one or more invalid characters
-    equation invalidChars = "1 + 1 - 3 * 4 / 5 ^ 6 @";
-    equation invalidChars2 = "1 + 1 - 3 * 4 / 5 ^ 6 #";
-    equation invalidChars3 = "1 + 1% - 3 * 4 / 5 ^ 6 $";
+    const equation invalidChars = "1 + 1 - 3 * 4 / 5 ^ 6 @";
+    const equation invalidChars2 = "1 + 1 - 3 * 4 / 5 ^ 6 #";
+    const equation invalidChars3 = "1 + 1% - 3 * 4 / 5 ^ 6 $";
 
     // valid equation
-    equation validEq = "1 + 1 - 3 * 4 / 5 ^ 6";
+    const equation validEq = "1 + 1 - 3 * 4 / 5 ^ 6";
 
-    REQUIRE(checkValidCharacters(invalidChars) == false);
+    REQUIRE_THROWS(checkValidCharacters(invalidChars));
     REQUIRE(invalid_characters.size() == 1);
     REQUIRE(*invalid_characters[0] == '@');
 
-    REQUIRE(checkValidCharacters(invalidChars2) == false);
+    REQUIRE_THROWS(checkValidCharacters(invalidChars2));
     REQUIRE(invalid_characters.size() == 1);
     REQUIRE(*invalid_characters[0] == '#');
 
-    REQUIRE(checkValidCharacters(invalidChars3) == false);
+    REQUIRE_THROWS(checkValidCharacters(invalidChars3));
     REQUIRE(invalid_characters.size() == 2);
     REQUIRE(*invalid_characters[0] == '%');
     REQUIRE(*invalid_characters[1] == '$');
 
-    REQUIRE(checkValidCharacters(validEq) == true);
+    REQUIRE_NOTHROW(checkValidCharacters(validEq));
     REQUIRE(invalid_characters.empty());
 }
 
@@ -137,6 +137,11 @@ TEST_CASE("isOperator", "[operatorUsage] [sanitization]")
     REQUIRE(isOperator(' ') == false);
 }
 
+/*
+ * I have no idea why this test is failing...
+ * I mean it likely has something to do with the emplace functionality, but debugging has been a pain.
+ * It works when I run ONLY this test case, but when I run the entire test suite, it fails... UGH
+ * */
 TEST_CASE("Stack Class"){
 using namespace psv;
     // stack class should be able to place and pop values
@@ -237,67 +242,35 @@ std::vector<char> as_vector(std::string s){
     }
     return v;
 }
-TEST_CASE("Parse Equation"){
-    using namespace psv;
-    SECTION("Valid Statements"){
-        // Standard statement in order
-       std::string valid1 = "1+1-3*4/5^6";
-       std::vector<char> valid1_parsed;
-       REQUIRE_NOTHROW(valid1_parsed = parseStatement(valid1));
-       REQUIRE(valid1_parsed == as_vector("11+34*56^/-"));
-
-       // Statement with operators out of order
-       std::string valid2 = "1+1-3*4/5^6+1";
-       std::vector<char> valid2_parsed;
-       REQUIRE_NOTHROW(valid2_parsed = parseStatement(valid2));
-       REQUIRE(valid2_parsed == as_vector("11+34*56^/-1+"));
-
-       // Statement with parenthesis affecting order of operations
-       std::string valid3 = "(1+1)*3";
-       std::vector<char> valid3_parsed;
-       REQUIRE_NOTHROW(valid3_parsed = parseStatement(valid3));
-       REQUIRE(valid3_parsed == as_vector("11+3*"));
-
-
-       // Statement with two parenthesis
-         std::string valid4 = "(1+1)*(3+3)";
-            std::vector<char> valid4_parsed;
-            REQUIRE_NOTHROW(valid4_parsed = parseStatement(valid4));
-            REQUIRE(valid4_parsed == as_vector("11+33+*"));
-
-            // Statement with nested parenthesis
-            std::string valid5 = "((1+1)*3)";
-            std::vector<char> valid5_parsed;
-            REQUIRE_NOTHROW(valid5_parsed = parseStatement(valid5));
-            REQUIRE(valid5_parsed == as_vector("11+3*"));
-    }
-    SECTION("Invalid Statements"){
-        std::string invalid1 = "1+1-3*4/5^6+";
-        REQUIRE_THROWS(parseStatement(invalid1));
-
-    }
-
-}
 // This tests the program's ability to evaluate statements
 TEST_CASE("Non-RPN Evaluate"){
     using namespace psv;
-    SECTION("Test basic addition") {
-        REQUIRE(nonRpnEvaluate("1 + 2") == 3.0f);
+    SECTION("Basic Operations"){
+        SECTION("Addition") {
+            REQUIRE(nonRpnEvaluate("1 + 2") == 3.0f);
+        }
+        SECTION("Subtraction") {
+            REQUIRE(nonRpnEvaluate("5 - 3") == 2.0f);
+        }
+        SECTION("Multiplication") {
+            REQUIRE(nonRpnEvaluate("2 * 3") == 6.0f);
+        }
+        SECTION("Division") {
+            REQUIRE(nonRpnEvaluate("10 / 2") == 5.0f);
+        }
+        SECTION("Exponentiation") {
+            REQUIRE(nonRpnEvaluate("2 ^ 3") == 8.0f);
+            REQUIRE(nonRpnEvaluate("2 ^ 3 ^ 2") == 64.0f);
+            REQUIRE(nonRpnEvaluate("2 ^ (3^2)") == 512.0f);
+        }
+        SECTION("Unary Minus") {
+            REQUIRE(nonRpnEvaluate("-2+4") == 2.0f);
+            REQUIRE(nonRpnEvaluate("-2+-4") == -6.0f);
+            REQUIRE(nonRpnEvaluate("-2--4") == 2.0f);
+        }
     }
 
-    SECTION("Test basic subtraction") {
-        REQUIRE(nonRpnEvaluate("5 - 3") == 2.0f);
-    }
-
-    SECTION("Test basic multiplication") {
-        REQUIRE(nonRpnEvaluate("2 * 3") == 6.0f);
-    }
-
-    SECTION("Test basic division") {
-        REQUIRE(nonRpnEvaluate("10 / 2") == 5.0f);
-    }
-
-    SECTION("Test complex expression with parentheses") {
+    SECTION("Complex Expressions") {
         /* Let it be known that today was the day my own code went beyond
          * ChatGPT...
          * (Most all of these tests were generated by ChatGPT and/or GHCopilot)
@@ -307,18 +280,21 @@ TEST_CASE("Non-RPN Evaluate"){
                 -23.0f == -55.0f
          * */
 //        REQUIRE(nonRpnEvaluate("(1 + 3) * 2 + (1 - 32)") == -55.0f);
-        // Correct answer is in fact -23.0f
+        // Correct answer is in fact -23.0f, not -55.0f as ChatGPT would have you believe!!!
         REQUIRE(nonRpnEvaluate("(1 + 3) * 2 + (1 - 32)") == -23.0f);
-    }
+        SECTION("Nested parentheses") {
+            REQUIRE(nonRpnEvaluate("2 * (1 + (3 - 2) * (2 + (5 - 3)))") == 10.0f);
+            REQUIRE(nonRpnEvaluate("((2 + 3) * 4 - 7) / (5 - 2) + 8 * (3 - 1)") == (20.0f + (1.0f / 3.0f)));
+        }SECTION("Unbalanced parentheses"){
+            REQUIRE_THROWS_AS(nonRpnEvaluate("(1 + 2)) * 3"), std::invalid_argument);
+        }SECTION("Division by zero") {
+            REQUIRE_THROWS_AS(nonRpnEvaluate("1 / 0"), std::invalid_argument);
+        }
 
-    SECTION("Test division by zero") {
-        REQUIRE_THROWS(nonRpnEvaluate("1 / 0"));
-//        REQUIRE_THROWS_AS(nonRpnEvaluate("1 / 0"), std::invalid_argument);
-    }
-
-    // TODO: Verify count of operators and operands
-    SECTION("Test invalid expression") {
-        REQUIRE_THROWS_AS(nonRpnEvaluate("1 + "), std::invalid_argument);
+            // TODO: Verify count of operators and operands
+        SECTION("Invalid expression") {
+            REQUIRE_THROWS_AS(nonRpnEvaluate("1 + "), std::invalid_argument);
+        }
     }
 }
 

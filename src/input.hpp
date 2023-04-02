@@ -10,7 +10,7 @@
 #include <array>
 #include <algorithm>
 #include <map>
-#include "math.h"
+#include <cmath>
 
 #include "Stack.h"
 
@@ -24,33 +24,37 @@ namespace psv
 
 using equation = std::string;
 
+// Driving Functions
+float nonRpnEvaluate(const equation& eq);
+float operateBinary(float a, float b, char op);
+float operateUnary(float a, char op);
+
 // True if equation contains no invalid characters.
-bool checkValidCharacters(const equation& eq);
+void checkValidCharacters(const equation& eq);
 
 // True if scoping is valid. (Use of parentheses)
-void validScoping(const equation& eq);
 
 // True if operators are used correctly.
-bool validMinus(char preceding, char succeeding);
 bool validOperator(char preceding, char succeeding);
-std::vector<const char*> operatorLocations(const equation& eq);
+void validOperators(const equation& eq);
+void validScoping(const equation& eq);
 bool isOperator(const char& c);
-
+bool isUnary(char op);
 // Eliminates whitespace from a string.
 void eliminateWhiteSpace(equation& eq);
 
 std::vector<char> parseStatement(const equation& eq);
 float evaluateParsed(const equation& eq);
 
+std::vector<const char*> operatorLocations(const equation& eq);
 
-float nonRpnEvaluate(const equation& eq);
-float operate(float a, float b, char op);
 
-static const std::array<char, 8> valid_opers = {'+', '-', '*', '/', '^', 'n', '(', ')'};
+
+static const std::array<char, 8> valid_ops = {'+', '-', '*', '/', '^', 'n'};
 static const std::array<char, 14> valid_operands = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', ' ', '(', ')'};
-static const std::array<char, 19> all_valid = {
+static const std::array<char, 20> all_valid = {
         '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.',
-        '+', '-', '*', '/', '^', '(', ')', ' '
+        '+', '-', '*', '/', '^', '(', ')', ' ', 'n'
 };
 
 static const std::map<char, int> precedence = {
@@ -64,14 +68,16 @@ static const std::map<char, int> precedence = {
 };
 
 std::vector<const char*> invalid_characters;
-bool checkValidCharacters(const equation& eq) {
+void checkValidCharacters(const equation& eq) {
     invalid_characters.clear();
     for (auto const& character : eq) {
         if (std::find(all_valid.begin(), all_valid.end(), character) == all_valid.end()) {
             invalid_characters.push_back(&character);
         }
     }
-    return invalid_characters.empty();
+    if (!invalid_characters.empty()) {
+        throw std::invalid_argument("Invalid characters in equation");
+    }
 }
 
 void validScoping(const equation & eq) {
@@ -81,14 +87,14 @@ void validScoping(const equation & eq) {
             invalid_scope.place(c);
         } else if (c == ')') {
             if (invalid_scope.isEmpty()) {
-                throw std::runtime_error("Invalid scoping.");
+                throw std::invalid_argument("Unbalanced parentheses");
             } else {
                 invalid_scope.pop();
             }
         }
     }
     if (!invalid_scope.isEmpty()) {
-        throw std::runtime_error("Invalid scoping.");
+        throw std::invalid_argument("Unbalanced parentheses");
     }
 }
 
@@ -98,7 +104,7 @@ bool validMinus(const char preceding, const char succeeding) {
 }
 
 bool validOperator(const char preceding, const char succeeding) {
-    if (isOperator(preceding) || (isOperator(succeeding) && succeeding != '-'))
+    if (isOperator(preceding) || (isOperator(succeeding) && succeeding != 'n'))
         return false;
 
     return true;
@@ -110,7 +116,7 @@ std::vector<const char*> operatorLocations(const equation & eq) {
     // gather pointers to all operators
     const char* ptr = (&eq[0]);
     for(int i = 0; i < eq.size(); i++) {
-        if (std::find(valid_opers.begin(), valid_opers.end(), *ptr) != valid_opers.end()) {
+        if (std::find(valid_ops.begin(), valid_ops.end(), *ptr) != valid_ops.end()) {
             operator_locations.push_back(ptr);
         }
         ptr++;
@@ -120,7 +126,7 @@ std::vector<const char*> operatorLocations(const equation & eq) {
 }
 
 bool isOperator(const char& c) {
-    if (std::find(valid_opers.begin(), valid_opers.end(), c) != valid_opers.end())
+    if (std::find(valid_ops.begin(), valid_ops.end(), c) != valid_ops.end())
         return true;
     else
         return false;
@@ -130,122 +136,35 @@ void eliminateWhiteSpace(equation& eq) {
     eq.erase(remove_if(eq.begin(), eq.end(), isspace), eq.end());
 }
 
-/*
- * Attempts to parse a math statement (string) into an output vector of operands and operators.
- *
- *
- * @param eq The statement to be parsed.
- * @return An output vector of operands and operators.
- * */
-std::vector<char> parseStatement(const equation& eq) {
-
-    // Eliminate whitespace
-    equation temp = eq;
-
-    eliminateWhiteSpace(temp);
-    // Check for valid characters
-    if (!checkValidCharacters(temp)) {
-        throw std::invalid_argument("Invalid characters in equation.");
-    }
-
-    validScoping(temp);
-
-    // Search and replace all unary minuses with 'n'
-    for(auto & c : temp) {
-        if (c == '-' && (c == temp[0] || isOperator(*(&c-1)) && *(&c-1) != ')'))
-            c = 'n';
-    }
-
-    // Yes, not using else if here is intentional.
-    // It is much more readable at the cost fo an extra 2 comparisons per character.
-    psv::Stack<char> operators;
-    std::vector<char> output;
-    for(auto& c : temp) {
-        if(!isOperator(c)){
-            output.push_back(c);
-        }else if (operators.isEmpty() || c == '('){
-            operators.place(c);
-        }else if (c == ')') {
-            while (operators.top() != '(') {
-                output.push_back(operators.pop());
-            }
-            operators.pop();
-        } else { // is a non parenthesis operator
-            while (!operators.isEmpty() && precedence.at(operators.top()) >= precedence.at(c)) {
-                output.push_back(operators.pop());
-            }
-            operators.place(c);
-        }
-    }
-
-    while (!operators.isEmpty())
-        output.push_back(operators.pop());
-
-    // just count that the number of operands is one less than the number of operators except for unary minuses
-    return output;
-}
-
-float evaluateParsed(const equation& eq) {
-    std::vector<float> operands;
-    std::vector<char> parsed = parseStatement(eq);
-
-    for(auto & c : parsed) {
-        if (isOperator(c)) {
-            if (c == 'n') {
-                operands.back() *= -1;
-                continue;
-            }
-            float b = operands.back();
-            operands.pop_back();
-            float a = operands.back();
-            operands.pop_back();
-            switch (c) {
-                case '+':
-                    operands.push_back(a + b);
-                    break;
-                case '-':
-                    operands.push_back(a - b);
-                    break;
-                case '*':
-                    operands.push_back(a * b);
-                    break;
-                case '/':
-                    operands.push_back(a / b);
-                    break;
-                case '^':
-                    operands.push_back(pow(a, b));
-                    break;
-                default:
-                    throw std::invalid_argument("Invalid operator in parsed equation.");
-            }
+void validOperators(const equation& eq) {
+    std::vector<const char*> operator_locations = operatorLocations(eq);
+    for (auto const& op : operator_locations) {
+        const char right = *(op + 1);
+        if(*op == 'n'){
+            if(!isdigit(right) && right != '(')
+                throw std::invalid_argument("Invalid operator placement.");
         } else {
-            std::string temp(1, c);
-            operands.push_back(std::stof(temp));
+            const char left = *(op - 1);
+            if(!validOperator(left, right))
+                throw std::invalid_argument("Invalid operator placement.");
         }
     }
-    return operands.back();
 }
 
+// TODO: Maybe add a way to save the states of the statement as it is evaluated...i.e. show steps
 float nonRpnEvaluate(const equation& eq) {
-    // Eliminate whitespace
     equation eq_copy = eq;
 
-    eliminateWhiteSpace(eq_copy);
-    // Check for valid characters
-    if (!checkValidCharacters(eq_copy)) {
-        throw std::invalid_argument("Invalid characters in equation.");
-    }
-
-    validScoping(eq_copy);
-
-    // Search and replace all unary minuses with 'n'
+    // Use 'n' to represent unary minus
     for(auto & c : eq_copy) {
         if (c == '-' && (c == eq_copy[0] || isOperator(*(&c - 1)) && *(&c - 1) != ')'))
             c = 'n';
     }
 
-
-
+    eliminateWhiteSpace(eq_copy);
+    checkValidCharacters(eq_copy);
+    validScoping(eq_copy);
+    validOperators(eq_copy);
 
     psv::Stack<float> output;
     psv::Stack<char> operators;
@@ -265,18 +184,26 @@ float nonRpnEvaluate(const equation& eq) {
             operators.place(symbol);
         } else if (symbol == ')') {
             while (operators.top() != '(') {
-                float b = output.pop();
-                float a = output.pop();
                 char op = operators.pop();
-                output.place(operate(a, b, op));
+                float b = output.pop();
+                if(isUnary(op)){
+                    output.place(operateUnary(b, op));
+                    continue;
+                }
+                float a = output.pop();
+                output.place(operateBinary(a, b, op));
             }
             operators.pop();
-        } else { // is a non parenthesis operator
+        } else { // is a binary operator
             while (!operators.isEmpty() && precedence.at(operators.top()) >= precedence.at(symbol)) {
-                float b = output.pop();
-                float a = output.pop();
                 char op = operators.pop();
-                output.place(operate(a, b, op));
+                float b = output.pop();
+                if(isUnary(op)){
+                    output.place(operateUnary(b, op));
+                    continue;
+                }
+                float a = output.pop();
+                output.place(operateBinary(a, b, op));
             }
             operators.place(symbol);
         }
@@ -288,15 +215,23 @@ float nonRpnEvaluate(const equation& eq) {
     for (int i = 0; i < operators.size()+1; ++i) {
         char op = operators.pop();
         float b = output.pop();
+        if(isUnary(op)){
+            output.place(operateUnary(b, op));
+            continue;
+        }
         float a = output.pop();
-        output.place(operate(a, b, op));
+        output.place(operateBinary(a, b, op));
     }
     // just count that the number of operands is one less than the number of operators except for unary minuses
     // Should always be true...?
     return output.pop();
 }
 
-float operate(float a, float b, char op){
+bool isUnary(char op) {
+    return op == 'n';
+}
+
+float operateBinary(float a, float b, char op){
     switch (op) {
         case '+':
             return a + b;
@@ -314,6 +249,15 @@ float operate(float a, float b, char op){
             throw std::invalid_argument("Invalid operator in parsed equation.");
     }
 }
+float operateUnary(float a, char op) {
+    switch (op) {
+        case 'n':
+            return a * -1;
+        default:
+            throw std::invalid_argument("Invalid operator in parsed equation.");
+    }
+}
+
 } // namespace psv
 
 #endif //MATH_MATTERS_INPUT_HPP
