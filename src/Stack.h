@@ -13,15 +13,17 @@ template<typename T>
 class Stack {
 public:
     Stack();
+    Stack(const Stack &other);
     ~Stack();
 
     // Modify
-    void push(T element);
+    void place(T element);
 
     template<typename... Args>
     void emplace(Args &&... args);
 
     T pop();
+    void clear();
 
     // Query
     bool isEmpty();
@@ -29,16 +31,24 @@ public:
     T top();
 
 private:
-    T *_stack;
-    int _size = 0;
+    int _size;
     int _topIndex;
+    T *_stack;
 };
 
 template<typename T>
-Stack<T>::Stack() {
+Stack<T>::Stack() : _size(0), _topIndex(-1){
     _stack = new T[1];
-    _topIndex = -1;
 }
+
+template<typename T>
+Stack<T>::Stack(const Stack& other) {
+    _size = other._size;
+    _topIndex = other._topIndex;
+    _stack = new T[_size];
+    std::memcpy(_stack, other._stack, sizeof(T) * _size);
+}
+
 
 template<typename T>
 Stack<T>::~Stack() {
@@ -46,7 +56,7 @@ Stack<T>::~Stack() {
 }
 
 template<typename T>
-void Stack<T>::push(T element) {
+void Stack<T>::place(T element) {
     if (_topIndex == _size - 1) {
         T *temp = new T[_size * 2];
         std::memcpy(temp, _stack, sizeof(T) * _size);
@@ -57,6 +67,7 @@ void Stack<T>::push(T element) {
     _size++;
 }
 
+// I was reading about perfect forwarding and I wanted to try it out.
 template<typename T>
 template<typename... Args>
 void Stack<T>::emplace(Args &&... args) {
@@ -78,6 +89,14 @@ T Stack<T>::pop() {
     T temp = _stack[_topIndex--];
     _size--;
     return temp;
+}
+
+template<typename T>
+void Stack<T>::clear() {
+    delete[] _stack;
+    _stack = new T[1];
+    _size = 0;
+    _topIndex = -1;
 }
 
 // Query
