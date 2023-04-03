@@ -83,7 +83,7 @@ void Stack<T>::emplace(Args &&... args) {
 
 template<typename T>
 T Stack<T>::pop() {
-    if (_topIndex == -1) {
+    if (_topIndex <= -1) {
         throw std::out_of_range("Stack is empty");
     }
     T temp = _stack[_topIndex--];
@@ -112,6 +112,9 @@ int Stack<T>::size() {
 
 template<typename T>
 T Stack<T>::top() {
+    if (_size <= 0) {
+        throw std::out_of_range("Stack is empty");
+    }
     return _stack[_topIndex];
 }
 
