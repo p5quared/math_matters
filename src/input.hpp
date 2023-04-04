@@ -99,8 +99,7 @@ void validScoping(const equation & eq) {
 }
 
 bool validMinus(const char preceding, const char succeeding) {
-    if (isOperator(succeeding))
-        return false;
+    return isOperator(preceding) || isOperator(succeeding);
 }
 
 bool validOperator(const char preceding, const char succeeding) {

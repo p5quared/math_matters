@@ -130,8 +130,8 @@ TEST_CASE("isOperator", "[operatorUsage] [sanitization]")
     REQUIRE(isOperator('/') == true);
     REQUIRE(isOperator('^') == true);
     REQUIRE(isOperator('n') == true);
-    REQUIRE(isOperator('(') == true);
-    REQUIRE(isOperator(')') == true);
+    REQUIRE(isOperator('(') == false);
+    REQUIRE(isOperator(')') == false);
     REQUIRE(isOperator('1') == false);
     REQUIRE(isOperator('a') == false);
     REQUIRE(isOperator(' ') == false);
@@ -165,17 +165,21 @@ using namespace psv;
         REQUIRE(s.top() == 1);
         s.pop();
         REQUIRE(s.isEmpty() == true);
+        REQUIRE_THROWS(s.top(), "Stack is empty");
+        REQUIRE_THROWS(s.pop(), "Stack is empty");
+        REQUIRE_THROWS_AS(s.top(), std::out_of_range);
+        REQUIRE_THROWS_AS(s.pop(), std::out_of_range);
     }
 
-    struct Car {
-        int year;
-        std::string make;
-        std::string model;
-        Car(int y, std::string m, std::string mo) : year(y), make(m), model(mo) {}
-        Car() : year(0), make(""), model("") {}
-
-    };
     SECTION("Custom Objects"){
+        struct Car {
+            int year;
+            std::string make;
+            std::string model;
+            Car(int y, std::string m, std::string mo) : year(y), make(m), model(mo) {}
+            Car() : year(0), make(""), model("") {}
+
+        };
         Car car1 = Car(2019, "Ford", "Mustang");
         Car car2 = Car(2018, "Ford", "F-150");
         Car car3 = Car(2017, "Ford", "Fusion");
@@ -204,34 +208,42 @@ using namespace psv;
 
     // Emplace is way cooler than place... |-D-D| (cool-sunglasses)
     SECTION("Emplace"){
-        Stack<Car> car_stack;
-        car_stack.emplace(2019, "Ford", "Mustang");
-        car_stack.emplace(2018, "Ford", "F-150");
-        car_stack.emplace(2017, "Ford", "Fusion");
-        car_stack.emplace(2016, "Ford", "Focus");
-        car_stack.emplace(2015, "Ford", "Explorer");
+        struct Car {
+            int year;
+            std::string make;
+            std::string model;
+            Car(int y, std::string m, std::string mo) : year(y), make(m), model(mo) {}
+            Car() : year(0), make(""), model("") {}
 
-        REQUIRE(car_stack.top().year == 2015);
-        REQUIRE(car_stack.top().make == "Ford");
-        REQUIRE(car_stack.top().model == "Explorer");
-        car_stack.pop();
-        REQUIRE(car_stack.top().year == 2016);
-        REQUIRE(car_stack.top().make == "Ford");
-        REQUIRE(car_stack.top().model == "Focus");
-        car_stack.pop();
-        REQUIRE(car_stack.top().year == 2017);
-        REQUIRE(car_stack.top().make == "Ford");
-        REQUIRE(car_stack.top().model == "Fusion");
-        car_stack.pop();
-        REQUIRE(car_stack.top().year == 2018);
-        REQUIRE(car_stack.top().make == "Ford");
-        REQUIRE(car_stack.top().model == "F-150");
-        car_stack.pop();
-        REQUIRE(car_stack.top().year == 2019);
-        REQUIRE(car_stack.top().make == "Ford");
-        REQUIRE(car_stack.top().model == "Mustang");
-        car_stack.pop();
-        REQUIRE(car_stack.isEmpty() == true);
+        };
+        Stack<Car> car_stack2;
+        car_stack2.emplace(2019, "Ford", "Mustang");
+        car_stack2.emplace(2018, "Ford", "F-150");
+        car_stack2.emplace(2017, "Ford", "Fusion");
+        car_stack2.emplace(2016, "Ford", "Focus");
+        car_stack2.emplace(2015, "Ford", "Explorer");
+
+        REQUIRE(car_stack2.top().year == 2015);
+        REQUIRE(car_stack2.top().make == "Ford");
+        REQUIRE(car_stack2.top().model == "Explorer");
+        car_stack2.pop();
+        REQUIRE(car_stack2.top().year == 2016);
+        REQUIRE(car_stack2.top().make == "Ford");
+        REQUIRE(car_stack2.top().model == "Focus");
+        car_stack2.pop();
+        REQUIRE(car_stack2.top().year == 2017);
+        REQUIRE(car_stack2.top().make == "Ford");
+        REQUIRE(car_stack2.top().model == "Fusion");
+        car_stack2.pop();
+        REQUIRE(car_stack2.top().year == 2018);
+        REQUIRE(car_stack2.top().make == "Ford");
+        REQUIRE(car_stack2.top().model == "F-150");
+        car_stack2.pop();
+        REQUIRE(car_stack2.top().year == 2019);
+        REQUIRE(car_stack2.top().make == "Ford");
+        REQUIRE(car_stack2.top().model == "Mustang");
+        car_stack2.pop();
+        REQUIRE(car_stack2.isEmpty() == true);
     }
 }
 
@@ -242,6 +254,17 @@ std::vector<char> as_vector(std::string s){
     }
     return v;
 }
+// Totally unnecessary, but I want to get my code coverage up to 100% so here we are...
+TEST_CASE("As Vector"){
+    using namespace psv;
+    SECTION("Basic"){
+        REQUIRE(as_vector("12345") == std::vector<char>{'1', '2', '3', '4', '5'});
+        REQUIRE(as_vector("abcde") == std::vector<char>{'a', 'b', 'c', 'd', 'e'});
+        REQUIRE(as_vector("ABCDE") == std::vector<char>{'A', 'B', 'C', 'D', 'E'});
+        REQUIRE(as_vector("12345abcdeABCDE") == std::vector<char>{'1', '2', '3', '4', '5', 'a', 'b', 'c', 'd', 'e', 'A', 'B', 'C', 'D', 'E'});
+    }
+}
+
 // This tests the program's ability to evaluate statements
 TEST_CASE("Non-RPN Evaluate"){
     using namespace psv;
@@ -291,10 +314,11 @@ TEST_CASE("Non-RPN Evaluate"){
             REQUIRE_THROWS_AS(nonRpnEvaluate("1 / 0"), std::invalid_argument);
         }
 
-            // TODO: Verify count of operators and operands
         SECTION("Invalid expression") {
             REQUIRE_THROWS_AS(nonRpnEvaluate("1 + "), std::invalid_argument);
+            REQUIRE_THROWS_AS(nonRpnEvaluate("1 + 2 +"), std::invalid_argument);
         }
+
     }
 }
 

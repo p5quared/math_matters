@@ -17,7 +17,7 @@ int main() {
     std::string result_string;
     std::stringstream result_stream;
     bool evaluated = false;
-    Component input_statement = Input(&statement, "Enter a statement: ");
+Component input_statement = Input(&statement, "Enter a Statement");
 
     auto button_evaluate = Button("Evaluate", [&] {
         try {
@@ -29,7 +29,7 @@ int main() {
         } catch (std::exception& e) {
 
         }
-    });
+    }, ButtonOption::Ascii());
 
     auto document_mm = Container::Vertical({
                                                 input_statement,
@@ -37,20 +37,22 @@ int main() {
                                         });
 
     auto Math_Matters = Renderer(document_mm, [&] {
+        auto result_conditional = evaluated ? hbox({
+            text("=") | bold,
+            text(result_string) | bold,
+        }) | vcenter : hbox({});
+
+
         return vbox({
             filler(),
             hbox({
-                input_statement->Render(),
-            }) | vcenter,
-            hbox({
-                text("Result: ") | bold,
-                text(result_string) | bold,
-            }) | vcenter,
-            filler(),
+                input_statement->Render() | flex_shrink | border,
+            }) | vcenter | hcenter,
+            result_conditional | hcenter,
             hbox({
                 button_evaluate->Render(),
-            }) | vcenter,
-            text("By Peter V.") | hcenter,
+            }) | vcenter | hcenter ,
+            filler(),
         });
     });
 

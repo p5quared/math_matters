@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.24)
+cmake_minimum_required(VERSION 3.14)
 project(math_matters)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -6,6 +6,16 @@ set(CMAKE_CXX_STANDARD 17)
 add_executable(math_matters src/main.cpp)
 add_executable(tests src/tests.cpp)
 include_directories(src)
+
+# assume built-in pthreads on MacOS
+IF(APPLE)
+  set(CMAKE_THREAD_LIBS_INIT "-lpthread")
+  set(CMAKE_HAVE_THREADS_LIBRARY 1)
+  set(CMAKE_USE_WIN32_THREADS_INIT 0)
+  set(CMAKE_USE_PTHREADS_INIT 1)
+  set(THREADS_PREFER_PTHREAD_FLAG ON)
+ENDIF()
+
 
 # Download and unpack Catch2
 Include(FetchContent)
@@ -21,6 +31,7 @@ FetchContent_Declare(
 set(FETCHCONTENT_UPDATES_DISCONNECTED TRUE)
 FetchContent_Declare(ftxui
     GIT_REPOSITORY https://github.com/ArthurSonzogni/ftxui
+    GIT_TAG        master
     )
 
 FetchContent_GetProperties(ftxui)
