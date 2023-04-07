@@ -4,7 +4,7 @@ project(math_matters)
 set(CMAKE_CXX_STANDARD 17)
 
 add_executable(math_matters src/main.cpp)
-add_executable(tests src/tests.cpp)
+add_executable(tests tests/tests.cpp)
 include_directories(src)
 
 # assume built-in pthreads on MacOS
@@ -16,31 +16,32 @@ IF(APPLE)
   set(THREADS_PREFER_PTHREAD_FLAG ON)
 ENDIF()
 
-
-# Download and unpack Catch2
+# Gather and Install Libraries
 Include(FetchContent)
-
 FetchContent_Declare(
         Catch2
         GIT_REPOSITORY https://github.com/catchorg/Catch2.git
         GIT_TAG        v3.0.1
 )
-
-# Fetch FTXUI
-
 set(FETCHCONTENT_UPDATES_DISCONNECTED TRUE)
+FetchContent_MakeAvailable(Catch2)
+
 FetchContent_Declare(ftxui
     GIT_REPOSITORY https://github.com/ArthurSonzogni/ftxui
     GIT_TAG        master
-    )
-
+)
 FetchContent_GetProperties(ftxui)
 if(NOT ftxui_POPULATED)
   FetchContent_Populate(ftxui)
   add_subdirectory(${ftxui_SOURCE_DIR} ${ftxui_BINARY_DIR} EXCLUDE_FROM_ALL)
 endif()
 
-FetchContent_MakeAvailable(Catch2)
+FETCHCONTENT_DECLARE(
+    spdlog
+    GIT_REPOSITORY https://github.com/gabime/spdlog
+    GIT_TAG        v1.x
+)
+FETCHCONTENT_MAKEAVAILABLE(spdlog)
 
 
 target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
@@ -48,4 +49,5 @@ target_link_libraries(math_matters
     PRIVATE ftxui::screen
     PRIVATE ftxui::dom
     PRIVATE ftxui::component # Not needed for this example.
+    PRIVATE spdlog
     )
