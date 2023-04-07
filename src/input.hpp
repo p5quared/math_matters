@@ -21,42 +21,29 @@
 
 namespace psv
 {
-
 using equation = std::string;
 
-// Driving Functions
+// Primary Logic
 float nonRpnEvaluate(const equation& eq);
+void cycleStack(Stack<float> &output, Stack<char> &operators);
 float operateBinary(float a, float b, char op);
 float operateUnary(float a, char op);
 
-// True if equation contains no invalid characters.
+// Parsing Functions
 void checkValidCharacters(const equation& eq);
-
-// True if scoping is valid. (Use of parentheses)
-
-// True if operators are used correctly.
 bool validOperator(char preceding, char succeeding);
 void validOperators(const equation& eq);
 void validScoping(const equation& eq);
 bool isOperator(const char& c);
 bool isUnary(char op);
-// Eliminates whitespace from a string.
 void eliminateWhiteSpace(equation& eq);
-
-std::vector<char> parseStatement(const equation& eq);
-float evaluateParsed(const equation& eq);
-
 std::vector<const char*> operatorLocations(const equation& eq);
 
-
-
 static const std::array<char, 8> valid_ops = {'+', '-', '*', '/', '^', 'n'};
-static const std::array<char, 14> valid_operands = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', ' ', '(', ')'};
 static const std::array<char, 20> all_valid = {
         '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.',
         '+', '-', '*', '/', '^', '(', ')', ' ', 'n'
 };
-
 static const std::map<char, int> precedence = {
         {'^', 5},
         {'n', 4},
@@ -66,6 +53,7 @@ static const std::map<char, int> precedence = {
         {'-', 2},
         {'(', 1}
 };
+
 
 std::vector<const char*> invalid_characters;
 void checkValidCharacters(const equation& eq) {
@@ -79,6 +67,7 @@ void checkValidCharacters(const equation& eq) {
         throw std::invalid_argument("Invalid characters in equation");
     }
 }
+
 
 void validScoping(const equation & eq) {
     psv::Stack<char> invalid_scope;
@@ -98,9 +87,6 @@ void validScoping(const equation & eq) {
     }
 }
 
-bool validMinus(const char preceding, const char succeeding) {
-    return isOperator(preceding) || isOperator(succeeding);
-}
 
 bool validOperator(const char preceding, const char succeeding) {
     if (isOperator(preceding) || (isOperator(succeeding) && succeeding != 'n'))
@@ -150,6 +136,7 @@ void validOperators(const equation& eq) {
     }
 }
 
+
 // TODO: Maybe add a way to save the states of the statement as it is evaluated...i.e. show steps
 float nonRpnEvaluate(const equation& eq) {
     equation eq_copy = eq;
@@ -160,6 +147,7 @@ float nonRpnEvaluate(const equation& eq) {
             c = 'n';
     }
 
+    // Quick scan for most issues before trying to evaluate
     eliminateWhiteSpace(eq_copy);
     checkValidCharacters(eq_copy);
     validScoping(eq_copy);
@@ -195,14 +183,7 @@ float nonRpnEvaluate(const equation& eq) {
             operators.pop();
         } else { // is a binary operator
             while (!operators.isEmpty() && precedence.at(operators.top()) >= precedence.at(symbol)) {
-                char op = operators.pop();
-                float b = output.pop();
-                if(isUnary(op)){
-                    output.place(operateUnary(b, op));
-                    continue;
-                }
-                float a = output.pop();
-                output.place(operateBinary(a, b, op));
+                cycleStack(output, operators);
             }
             operators.place(symbol);
         }
@@ -212,22 +193,24 @@ float nonRpnEvaluate(const equation& eq) {
     number_buffer.clear();
     // Utilize any remaining operators
     for (int i = 0; i < operators.size()+1; ++i) {
-        char op = operators.pop();
-        float b = output.pop();
-        if(isUnary(op)){
-            output.place(operateUnary(b, op));
-            continue;
-        }
-        float a = output.pop();
-        output.place(operateBinary(a, b, op));
+        cycleStack(output, operators);
     }
-    // just count that the number of operands is one less than the number of operators except for unary minuses
-    // Should always be true...?
     return output.pop();
 }
 
+
 bool isUnary(char op) {
     return op == 'n';
+}
+void cycleStack(Stack<float> &output, Stack<char> &operators) {
+    char op = operators.pop();
+    float b = output.pop();
+    if(isUnary(op)){
+        output.place(operateUnary(b, op));
+    }else{ // isBinary
+        float a = output.pop();
+        output.place(operateBinary(a, b, op));
+    }
 }
 
 float operateBinary(float a, float b, char op){
