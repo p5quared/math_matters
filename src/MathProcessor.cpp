@@ -2,18 +2,17 @@
 // Created by Peter Vaiciulis on 3/2/23.
 //
 
-#ifndef MATH_MATTERS_INPUT_HPP
-#define MATH_MATTERS_INPUT_HPP
+#ifndef MATH_MATTERS_PROCESSOR_CPP
+#define MATH_MATTERS_PROCESSOR_CPP
 
-#include <iostream>
 #include <vector>
 #include <array>
 #include <algorithm>
 #include <map>
 #include <cmath>
 #include <regex>
-
 #include "Stack.h"
+#include "MathProcessor.h"
 
 /*
  * This file contains functions that check the validity of an equation,
@@ -24,23 +23,6 @@
 namespace psv
 {
 using equation = std::string;
-
-// Primary Logic
-float nonRpnEvaluate(const equation& eq);
-void cycleStack(Stack<float> &output, Stack<char> &operators);
-float operateBinary(float a, float b, char op);
-float operateUnary(float a, char op);
-
-// Parsing Functions
-void checkValidCharacters(const equation& eq);
-bool validOperator(char preceding, char succeeding);
-void validOperators(const equation& eq);
-void validScoping(const equation& eq);
-bool isOperator(const char& c);
-bool isUnary(char op);
-void eliminateWhiteSpace(equation& eq);
-std::vector<const char*> operatorLocations(const equation& eq);
-
 static const std::array<char, 8> valid_ops = {'+', '-', '*', '/', '^', 'n'};
 static const std::array<char, 20> all_valid = {
         '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.',
@@ -58,6 +40,18 @@ static const std::map<char, int> precedence = {
 
 
 std::vector<const char*> invalid_characters;
+
+// Error Messages
+static const std::string invalid_characters_err = "Invalid Characters in Statement: Check your statement and ensure that"\
+                                                  "it only contains numbers, operators, and parentheses. Valid operators"\
+                                                  "include: +, -, *, /, ^";
+static const std::string parentheses_err = "Unbalanced Parentheses: Check your statement and ensure that every '(' has"\
+                                       "a corresponding ')' and vice versa.";
+static const std::string operator_err = "Invalid Operator Placement: Check your statement and ensure that operators are"\
+                                "not placed next to each other (exception for -), or next to a parenthesis.";
+static const std::string zero_division_err = "Zero Division Error: Check your statement and ensure that you are not"\
+                                             "dividing by zero.";
+
 void checkValidCharacters(const equation& eq) {
     invalid_characters.clear();
     for (auto const& character : eq) {
@@ -70,7 +64,6 @@ void checkValidCharacters(const equation& eq) {
     }
 }
 
-
 void validScoping(const equation & eq) {
     psv::Stack<char> invalid_scope;
     for (auto c : eq) {
@@ -78,14 +71,14 @@ void validScoping(const equation & eq) {
             invalid_scope.place(c);
         } else if (c == ')') {
             if (invalid_scope.isEmpty()) {
-                throw std::invalid_argument("Unbalanced parentheses");
+                throw std::invalid_argument(parentheses_err);
             } else {
                 invalid_scope.pop();
             }
         }
     }
     if (!invalid_scope.isEmpty()) {
-        throw std::invalid_argument("Unbalanced parentheses");
+        throw std::invalid_argument(parentheses_err);
     }
 }
 
@@ -129,17 +122,17 @@ void validOperators(const equation& eq) {
         const char right = *(op + 1);
         if(*op == 'n'){
             if(!isdigit(right) && right != '(')
-                throw std::invalid_argument("Invalid operator placement.");
+                throw std::invalid_argument(operator_err);
         } else {
             const char left = *(op - 1);
             if(!validOperator(left, right))
-                throw std::invalid_argument("Invalid operator placement.");
+                throw std::invalid_argument(operator_err);
         }
     }
 }
 
 // Used to handle steps in the evaluation process
-std::string last_step;
+static std::string last_step;
 std::vector<std::string> steps;
 
 float nonRpnEvaluate(const equation& eq) {
@@ -158,6 +151,7 @@ float nonRpnEvaluate(const equation& eq) {
     validScoping(eq_copy);
     validOperators(eq_copy);
     last_step = eq_copy;
+    steps.push_back(std::regex_replace(last_step, std::regex("n"), "-"));
 
     psv::Stack<float> output;
     psv::Stack<char> operators;
@@ -217,11 +211,13 @@ void parseLastStep(std::string step, const std::string& target_exp, const std::s
     while (std::regex_search(step, match, re)) {
         step.replace(step.find(match.str()), match.str().length(), match.str().substr(1, match.str().length()-2));
     }
-
     // Replace target expression with target reduced
     step.replace(step.find(target_exp), target_exp.length(), target_reduced);
-    steps.push_back(step);
+
     last_step = step;
+    // Replace special unary minus character ('n') with regular minus ('-')
+    step = std::regex_replace(step, std::regex("n"), "-");
+    steps.push_back(step);
 }
 
 void cycleStack(Stack<float> &output, Stack<char> &operators) {
@@ -238,6 +234,7 @@ void cycleStack(Stack<float> &output, Stack<char> &operators) {
         output.place(operateBinary(a, b, op));
         target = std::to_string(static_cast<int>(a)) + op + std::to_string(static_cast<int>(b));
     }
+    // TODO: Clean this up: I think we can get rid of target and just use target_reduced/step_reduced
     parseLastStep(last_step, target, std::to_string(static_cast<int>(output.top())));
 }
 
@@ -255,17 +252,17 @@ float operateBinary(float a, float b, char op){
             return a * b;
         case '/':
             if (b == 0)
-                throw std::invalid_argument("Division by zero.");
+                throw std::invalid_argument(zero_division_err);
             return a / b;
         case '^':
             return pow(a, b);
         default:
-            throw std::invalid_argument("Invalid operator in parsed equation.");
+            throw std::invalid_argument(invalid_characters_err);
     }
 }
 float operateUnary(float a, char op) {
     if(op != 'n'){
-        throw std::invalid_argument("Invalid operator in parsed equation.");
+        throw std::invalid_argument(invalid_characters_err);
     } else { // only unary operator is negative for now
         return a * -1;
     }
@@ -273,4 +270,4 @@ float operateUnary(float a, char op) {
 
 } // namespace psv
 
-#endif //MATH_MATTERS_INPUT_HPP
+#endif //MATH_MATTERS_PROCESSOR_CPP

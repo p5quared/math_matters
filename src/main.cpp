@@ -2,16 +2,18 @@
 #include <iomanip>
 #include <vector>
 #include <sstream>
+#include <regex>
 #include <spdlog/spdlog.h>
 #include "spdlog/sinks/basic_file_sink.h"
 #include "ftxui/dom/elements.hpp"
 #include "ftxui/component/component.hpp"
 #include "ftxui/component/screen_interactive.hpp"
-#include "input.hpp"
+#include "MathProcessor.h"
 
 auto static logger = spdlog::basic_logger_mt("basic_logger", "basic-log.txt");
 auto static step_logger = spdlog::basic_logger_mt("step_logger", "step-log.txt");
 
+// 3*2^(12-8)+5*(4+1) (testing)
 
 int main() {
     using namespace ftxui;
@@ -21,9 +23,10 @@ int main() {
     float result;
     std::string result_string;
     std::stringstream result_stream;
+    std::string warning_msg;
 
     bool reveal_answer = false;
-    bool show_steps = false;
+    bool show_steps = true;
     bool show_warnings = false;
     bool valid_input = true;
     bool anything_entered = false;
@@ -31,16 +34,20 @@ int main() {
     InputOption _input_statement;
     _input_statement.on_change = [&]{
         anything_entered = true;
+        if(statement.size() < 2)
+            return;
         try {
             result_stream.str(std::string());
             result = psv::nonRpnEvaluate(statement);
             result_stream << std::fixed << std::setprecision(1) << result;
             result_string = result_stream.str();
             valid_input = true;
+            warning_msg.clear();
             spdlog::get("basic_logger")->info(result_string);
         } catch (std::exception& e) {
             valid_input = false;
             reveal_answer = false;
+            warning_msg = e.what();
             spdlog::get("basic_logger")->error(e.what());
         }
     };
@@ -67,6 +74,7 @@ Component input_statement = Input(&statement, "Enter a Statement", _input_statem
         valid_input = true;
         anything_entered = false;
         psv::steps.clear();
+        warning_msg.clear();
     }, ButtonOption::Ascii());
 
     auto document_main = Container::Vertical({
@@ -80,11 +88,38 @@ Component input_statement = Input(&statement, "Enter a Statement", _input_statem
             return vbox({});
         }
         Elements step_children; // haha
-        step_children.push_back(text(statement)|center);
-        for(auto const& step : psv::steps) {
-            step_children.push_back(text(step)|center);
+        // Get diffs between steps
+        for(int i = 0; i < psv::steps.size()-1; i++) {
+            std::string current_step = psv::steps[i];
+            std::string next_step = psv::steps[i+1];
+            std::string before_diff;
+            std::string diff;
+            std::string after_diff;
+
+            int dif_start = 0;
+            int diff_end = 0;
+            for(int j=0; j<next_step.size(); j++) {
+                if(current_step[j] != next_step[j]) {
+                    dif_start = j;
+                    break;
+                }
+            }
+            for(int j=1; j<next_step.size(); j++) {
+                if(current_step[current_step.size()-j] != next_step[next_step.size()-j]) {
+                    diff_end = current_step.size() - j;
+                    break;
+                }
+            }
+            before_diff = current_step.substr(0, dif_start);
+            diff = current_step.substr(dif_start, diff_end - dif_start + 1);
+            after_diff = current_step.substr(diff_end + 1, current_step.size() - 1);
+
+    step_children.push_back(hbox({
+                text(before_diff),
+                text(diff) | underlined,
+                text(after_diff),
+            }) | hcenter);
         }
-        step_children.pop_back();
         return vbox({
             text("Steps:") | dim ,
             vbox(step_children),
@@ -97,6 +132,10 @@ Component input_statement = Input(&statement, "Enter a Statement", _input_statem
             text(result_string) | bold,
         }) | vcenter : hbox({});
 
+        auto warnings = show_warnings ? hbox({
+            text(warning_msg) | color(Color::Red),
+        }) | center : hbox({});
+
 
         return vbox({
             filler(),
@@ -105,6 +144,7 @@ Component input_statement = Input(&statement, "Enter a Statement", _input_statem
             }) | vcenter | hcenter,
             Steps->Render() | hcenter,
             result_conditional | hcenter,
+            warnings,
             hbox({
                 reveal_answer ? button_reset->Render()
                 : button_evaluate->Render() | (valid_input ? color(Color::Green) : color(Color::Red)),
@@ -114,7 +154,7 @@ Component input_statement = Input(&statement, "Enter a Statement", _input_statem
     });
 
     auto toggle_steps = Checkbox("Show Steps?", &show_steps);
-    auto toggle_warnings = Checkbox("Show Warnings?(NOT IMPLEMENTED)", &show_warnings);
+    auto toggle_warnings = Checkbox("Show Warnings?", &show_warnings);
 
     auto document_settings = Container::Vertical({
         toggle_steps,
@@ -129,7 +169,6 @@ Component input_statement = Input(&statement, "Enter a Statement", _input_statem
                  toggle_warnings->Render(),
             }) | hcenter,
             filler(),
-            text("by Peter V.")
         });
     });
 
@@ -152,6 +191,7 @@ Component input_statement = Input(&statement, "Enter a Statement", _input_statem
             text("Math-Matters") | bold,
             tab_selection->Render(),
             tab_content->Render() | flex,
+            text("by Peter V.")
         });
     });
 

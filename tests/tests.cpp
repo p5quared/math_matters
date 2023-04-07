@@ -4,7 +4,7 @@
 #include "catch2/catch_test_macros.hpp"
 #include <string>
 
-#include "input.hpp"
+#include "MathProcessor.h"
 #include "Stack.h"
 
 TEST_CASE("Pre-Flight")
@@ -177,7 +177,7 @@ using namespace psv;
             std::string make;
             std::string model;
             Car(int y, std::string m, std::string mo) : year(y), make(m), model(mo) {}
-            Car() : year(0), make(""), model("") {}
+            Car() : year(0), make(), model() {}
 
         };
         Car car1 = Car(2019, "Ford", "Mustang");
@@ -213,7 +213,7 @@ using namespace psv;
             std::string make;
             std::string model;
             Car(int y, std::string m, std::string mo) : year(y), make(m), model(mo) {}
-            Car() : year(0), make(""), model("") {}
+            Car() : year(0), make(), model() {}
 
         };
         Stack<Car> car_stack2;
@@ -247,7 +247,7 @@ using namespace psv;
     }
 }
 
-std::vector<char> as_vector(std::string s){
+std::vector<char> as_vector(const std::string& s){
     std::vector<char> v;
     for(auto c : s){
         v.push_back(c);
