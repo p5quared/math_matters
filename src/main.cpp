@@ -27,11 +27,12 @@ int main() {
 
     bool reveal_answer = false;
     bool show_steps = false;
+    bool show_warnings = false;
     bool valid_input = true;
     bool anything_entered = false;
 
-    InputOption handle_change;
-    handle_change.on_change = [&]{
+    InputOption _input_statement;
+    _input_statement.on_change = [&]{
         anything_entered = true;
         try {
             result_stream.str(std::string());
@@ -46,11 +47,11 @@ int main() {
             spdlog::get("basic_logger")->error(e.what());
         }
     };
-    handle_change.on_enter = [&] {
+    _input_statement.on_enter = [&] {
         reveal_answer = valid_input;
     };
 
-Component input_statement = Input(&statement, "Enter a Statement", handle_change);
+Component input_statement = Input(&statement, "Enter a Statement", _input_statement);
 
     auto button_evaluate = Button("Evaluate", [&] {
         reveal_answer = valid_input;
@@ -71,7 +72,7 @@ Component input_statement = Input(&statement, "Enter a Statement", handle_change
         psv::steps.clear();
     }, ButtonOption::Ascii());
 
-    auto document_mm = Container::Vertical({
+    auto document_main = Container::Vertical({
                                                 input_statement,
                                                 button_evaluate | Maybe([&] { return !reveal_answer; }),
                                                 button_reset | Maybe(&reveal_answer),
@@ -91,7 +92,7 @@ Component input_statement = Input(&statement, "Enter a Statement", handle_change
         });
     });
 
-    auto Math_Matters = Renderer(document_mm, [&] {
+    auto Math_Matters = Renderer(document_main, [&] {
         auto result_conditional = reveal_answer ? hbox({
             text("=") | bold,
             text(result_string) | bold,
@@ -114,14 +115,21 @@ Component input_statement = Input(&statement, "Enter a Statement", handle_change
     });
 
     auto toggle_steps = Checkbox("Show Steps?", &show_steps);
+    auto toggle_warnings = Checkbox("Show Warnings?(NOT IMPLEMENTED)", &show_warnings);
 
     auto document_settings = Container::Vertical({
         toggle_steps,
+        toggle_warnings,
     });
     auto Settings_Help = Renderer(document_settings, [&] {
         return vbox({
-            text("Settings") | hcenter,
-            toggle_steps->Render() | center,
+            filler(),
+            vbox({
+                 text("Settings") | bold | hcenter,
+                 toggle_steps->Render(),
+                 toggle_warnings->Render(),
+            }) | hcenter,
+            filler(),
             text("by Peter V.")
         });
     });
