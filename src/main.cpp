@@ -2,15 +2,12 @@
 #include <iomanip>
 #include <vector>
 #include <sstream>
-
-#include "input.hpp"
-
 #include <spdlog/spdlog.h>
 #include "spdlog/sinks/basic_file_sink.h"
-
 #include "ftxui/dom/elements.hpp"
 #include "ftxui/component/component.hpp"
 #include "ftxui/component/screen_interactive.hpp"
+#include "input.hpp"
 
 auto static logger = spdlog::basic_logger_mt("basic_logger", "basic-log.txt");
 auto static step_logger = spdlog::basic_logger_mt("step_logger", "step-log.txt");
@@ -83,9 +80,11 @@ Component input_statement = Input(&statement, "Enter a Statement", _input_statem
             return vbox({});
         }
         Elements step_children; // haha
+        step_children.push_back(text(statement)|center);
         for(auto const& step : psv::steps) {
-            step_children.push_back(text(step));
+            step_children.push_back(text(step)|center);
         }
+        step_children.pop_back();
         return vbox({
             text("Steps:") | dim ,
             vbox(step_children),
