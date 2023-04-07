@@ -191,33 +191,21 @@ float nonRpnEvaluate(const equation& eq) {
     return output.pop();
 }
 
-void parseLastStep(std::string step, const std::string& target_exp, const std::string& target_reduced) {
-//    std::string target;
-//    std::string replacement;
-//    for (auto const& op : valid_ops) {
-//        if (op == 'n') {
-//            target = "n";
-//            replacement = "-";
-//        } else {
-//            target = std::string(1, op);
-//            replacement = std::string(1, op) + " ";
-//        }
-//        step.replace(step.find(target), target.length(), replacement);
-//    }
-
+// Gather and parse the last step (for each step) in the evaluation process
+void parseLastStep(const std::string& target_exp, const std::string& target_reduced) {
     // Remove parentheses that do not contain operators
     std::regex re(R"(\(-?\d+\))");
     std::smatch match;
-    while (std::regex_search(step, match, re)) {
-        step.replace(step.find(match.str()), match.str().length(), match.str().substr(1, match.str().length()-2));
+    while (std::regex_search(last_step, match, re)) {
+        last_step.replace(last_step.find(match.str()), match.str().length(), match.str().substr(1, match.str().length() - 2));
     }
     // Replace target expression with target reduced
-    step.replace(step.find(target_exp), target_exp.length(), target_reduced);
+    last_step.replace(last_step.find(target_exp), target_exp.length(), target_reduced);
 
-    last_step = step;
+    last_step = last_step;
     // Replace special unary minus character ('n') with regular minus ('-')
-    step = std::regex_replace(step, std::regex("n"), "-");
-    steps.push_back(step);
+    last_step = std::regex_replace(last_step, std::regex("n"), "-");
+    steps.push_back(last_step);
 }
 
 void cycleStack(Stack<float> &output, Stack<char> &operators) {
@@ -234,8 +222,7 @@ void cycleStack(Stack<float> &output, Stack<char> &operators) {
         output.place(operateBinary(a, b, op));
         target = std::to_string(static_cast<int>(a)) + op + std::to_string(static_cast<int>(b));
     }
-    // TODO: Clean this up: I think we can get rid of target and just use target_reduced/step_reduced
-    parseLastStep(last_step, target, std::to_string(static_cast<int>(output.top())));
+    parseLastStep(target, std::to_string(static_cast<int>(output.top())));
 }
 
 bool isUnary(char op) {

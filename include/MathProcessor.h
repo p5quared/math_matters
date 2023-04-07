@@ -34,6 +34,8 @@ namespace psv {
 
     void eliminateWhiteSpace(equation &eq);
 
+    void parseLastStep(const std::string& target_exp, const std::string& target_reduced);
+
 // Accessible Variables
     std::vector<const char *> operatorLocations(const equation &eq);
     extern std::vector<std::string> steps;
