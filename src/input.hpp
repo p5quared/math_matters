@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <map>
 #include <cmath>
+#include <regex>
 
 #include "Stack.h"
 
@@ -18,6 +19,7 @@
  * This file contains functions that check the validity of an equation,
  * and also the functions that parse the equation into a stack of symbols.
  */
+
 
 namespace psv
 {
@@ -136,9 +138,12 @@ void validOperators(const equation& eq) {
     }
 }
 
+// Used to handle steps in the evaluation process
+std::string last_step;
+std::vector<std::string> steps;
 
-// TODO: Maybe add a way to save the states of the statement as it is evaluated...i.e. show steps
 float nonRpnEvaluate(const equation& eq) {
+    steps.clear();
     equation eq_copy = eq;
 
     // Use 'n' to represent unary minus
@@ -152,6 +157,7 @@ float nonRpnEvaluate(const equation& eq) {
     checkValidCharacters(eq_copy);
     validScoping(eq_copy);
     validOperators(eq_copy);
+    last_step = eq_copy;
 
     psv::Stack<float> output;
     psv::Stack<char> operators;
@@ -171,14 +177,7 @@ float nonRpnEvaluate(const equation& eq) {
             operators.place(symbol);
         } else if (symbol == ')') {
             while (operators.top() != '(') {
-                char op = operators.pop();
-                float b = output.pop();
-                if(isUnary(op)){
-                    output.place(operateUnary(b, op));
-                    continue;
-                }
-                float a = output.pop();
-                output.place(operateBinary(a, b, op));
+                cycleStack(output, operators);
             }
             operators.pop();
         } else { // is a binary operator
@@ -198,19 +197,52 @@ float nonRpnEvaluate(const equation& eq) {
     return output.pop();
 }
 
+void parseLastStep(std::string step, const std::string& target_exp, const std::string& target_reduced) {
+//    std::string target;
+//    std::string replacement;
+//    for (auto const& op : valid_ops) {
+//        if (op == 'n') {
+//            target = "n";
+//            replacement = "-";
+//        } else {
+//            target = std::string(1, op);
+//            replacement = std::string(1, op) + " ";
+//        }
+//        step.replace(step.find(target), target.length(), replacement);
+//    }
 
-bool isUnary(char op) {
-    return op == 'n';
+    // Remove parentheses that do not contain operators
+    std::regex re(R"(\(-?\d+\))");
+    std::smatch match;
+    while (std::regex_search(step, match, re)) {
+        step.replace(step.find(match.str()), match.str().length(), match.str().substr(1, match.str().length()-2));
+    }
+
+    // Replace target expression with target reduced
+    step.replace(step.find(target_exp), target_exp.length(), target_reduced);
+    steps.push_back(step);
+    last_step = step;
 }
+
 void cycleStack(Stack<float> &output, Stack<char> &operators) {
+    // Every time we cycle the stack, we update the list of steps
+    // Values are cast to int to avoid trailing zeros messing up find/replace
+    std::string target;
     char op = operators.pop();
     float b = output.pop();
     if(isUnary(op)){
         output.place(operateUnary(b, op));
+        target = op + std::to_string(static_cast<int>(b));
     }else{ // isBinary
         float a = output.pop();
         output.place(operateBinary(a, b, op));
+        target = std::to_string(static_cast<int>(a)) + op + std::to_string(static_cast<int>(b));
     }
+    parseLastStep(last_step, target, std::to_string(static_cast<int>(output.top())));
+}
+
+bool isUnary(char op) {
+    return op == 'n';
 }
 
 float operateBinary(float a, float b, char op){
@@ -232,11 +264,10 @@ float operateBinary(float a, float b, char op){
     }
 }
 float operateUnary(float a, char op) {
-    switch (op) {
-        case 'n':
-            return a * -1;
-        default:
-            throw std::invalid_argument("Invalid operator in parsed equation.");
+    if(op != 'n'){
+        throw std::invalid_argument("Invalid operator in parsed equation.");
+    } else { // only unary operator is negative for now
+        return a * -1;
     }
 }
 
