@@ -13,7 +13,6 @@
 auto static logger = spdlog::basic_logger_mt("basic_logger", "basic-log.txt");
 auto static step_logger = spdlog::basic_logger_mt("step_logger", "step-log.txt");
 
-// 3*2^(12-8)+5*(4+1) (testing)
 
 int main() {
     using namespace ftxui;
@@ -26,7 +25,7 @@ int main() {
     std::string warning_msg;
 
     bool reveal_answer = false;
-    bool show_steps = true;
+    bool show_steps = false;
     bool show_warnings = false;
     bool valid_input = true;
     bool anything_entered = false;
@@ -91,34 +90,56 @@ Component input_statement = Input(&statement, "Enter a Statement", _input_statem
         // Get diffs between steps
         for(int i = 0; i < psv::steps.size()-1; i++) {
             std::string current_step = psv::steps[i];
-            std::string next_step = psv::steps[i+1];
+            std::string next_step = psv::steps[i + 1];
             std::string before_diff;
             std::string diff;
             std::string after_diff;
 
             int dif_start = 0;
             int diff_end = 0;
-            for(int j=0; j<next_step.size(); j++) {
-                if(current_step[j] != next_step[j]) {
+            for (int j = 0; j < next_step.size(); j++) {
+                if (current_step[j] != next_step[j]) {
                     dif_start = j;
                     break;
                 }
             }
-            for(int j=1; j<next_step.size(); j++) {
-                if(current_step[current_step.size()-j] != next_step[next_step.size()-j]) {
+            for (int j = 1; j < next_step.size(); j++) {
+                if (current_step[current_step.size() - j] != next_step[next_step.size() - j]) {
                     diff_end = current_step.size() - j;
                     break;
                 }
             }
             before_diff = current_step.substr(0, dif_start);
             diff = current_step.substr(dif_start, diff_end - dif_start + 1);
-            after_diff = current_step.substr(diff_end + 1, current_step.size() - 1);
+            after_diff = current_step.substr(diff_end + 1, current_step.size());
 
-    step_children.push_back(hbox({
+            std::string next_before_diff = next_step.substr(0, dif_start);
+            std::string next_diff;
+            int z = 0;
+            while(!psv::isOperator(next_step[dif_start + z]) && (dif_start + z) < next_step.size() &&
+            next_step[dif_start + z] != ')'){
+                next_diff += next_step[z+dif_start];
+                z++;
+            }
+            std::string next_after_diff = next_step.substr(dif_start + z, next_step.size());
+
+        // Current step with diff to next in red
+        step_children.push_back(hbox({
                 text(before_diff),
-                text(diff) | underlined,
+                text(diff) | strikethrough | color(Color::Red),
                 text(after_diff),
             }) | hcenter);
+        if(i < psv::steps.size()-2){
+            // Next step with diff to previous in green
+            step_children.push_back(hbox({
+                     text(next_before_diff),
+                        text(next_diff) | color(Color::Green),
+                        text(next_after_diff),
+                 }) | dim | hcenter);
+            }
+            step_children.push_back(hbox({
+                text(" ")
+                }) | hcenter);
         }
         return vbox({
             text("Steps:") | dim ,
