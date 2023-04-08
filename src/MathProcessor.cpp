@@ -9,17 +9,19 @@
 namespace psv
 {
 const std::regex paren_no_op(R"(\(-?\d+\))");
-const boost::regex unary_minus(R"(((?<=[*\/\+\-^(])-(?=[\d\(])|^-))");
+const boost::regex unary_minus(R"(((?<=[*\/\+\-\^(])-(?=[\d\(])|^-))");
+const boost::regex unary_minus_exponent(R"((?<=\^)-)");
 
 // If I could do so simply, I would remove this right now
 using equation = std::string;
 
-static const std::array<char, 8> valid_ops = {'+', '-', '*', '/', '^', 'n'};
-static const std::array<char, 20> all_valid = {
+static const std::array<char, 9> valid_ops = {'+', '-', '*', '/', '^', 'n', 'm'};
+static const std::array<char, 21> all_valid = {
         '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.',
-        '+', '-', '*', '/', '^', '(', ')', ' ', 'n'
+        '+', '-', '*', '/', '^', '(', ')', ' ', 'n', 'm'
 };
 static const std::map<char, int> precedence = {
+        {'m', 6},
         {'^', 5},
         {'n', 4},
         {'*', 3},
@@ -78,7 +80,7 @@ void validScoping(const equation & eq) {
 bool validOperator(const char preceding, const char succeeding) {
     if(isOperator(preceding) || preceding == '(')
         return false;
-    if(isOperator(succeeding) && succeeding != 'n' || succeeding == ')')
+    if(isOperator(succeeding) && (succeeding != 'n' && succeeding != 'm') || succeeding == ')')
         return false;
 
 
@@ -115,7 +117,7 @@ void validOperators(const equation& eq) {
     std::vector<const char*> operator_locations = operatorLocations(eq);
     for (auto const& op : operator_locations) {
         const char right = *(op + 1);
-        if(*op == 'n'){
+        if(*op == 'n' || *op == 'm'){
             if(!isdigit(right) && right != '(')
                 throw std::invalid_argument(operator_err);
         } else {
@@ -137,6 +139,7 @@ float nonRpnEvaluate(const equation& eq) {
     eliminateWhiteSpace(eq_copy);
     // Use 'n' to represent unary minus
     // -3+ 4 * 2 / ( 1 - -5 ) ^ 2 ^ 3
+    eq_copy = boost::regex_replace(eq_copy, unary_minus_exponent, "m");
     eq_copy = boost::regex_replace(eq_copy, unary_minus, "n");
 
     // Quick scan for most issues before trying to evaluate
@@ -206,7 +209,7 @@ void cycleStack(Stack<float> &output, Stack<char> &operators) {
     float b = output.pop();
     if(isUnary(op)){
         output.place(operateUnary(b, op));
-        target = "n" + std::to_string(static_cast<int>(b));
+        target = op + std::to_string(static_cast<int>(b));
     }else{ // isBinary
         float a = output.pop();
         output.place(operateBinary(a, b, op));
@@ -216,7 +219,7 @@ void cycleStack(Stack<float> &output, Stack<char> &operators) {
 }
 
 bool isUnary(char op) {
-    return op == 'n';
+    return op == 'n' || op == 'm';
 }
 
 float operateBinary(float a, float b, char op){
@@ -238,7 +241,7 @@ float operateBinary(float a, float b, char op){
     }
 }
 float operateUnary(float a, char op) {
-    if(op != 'n'){
+    if(op != 'n' && op != 'm'){// if we reach this, god help us
         throw std::invalid_argument(invalid_characters_err);
     } else { // only unary operator is negative for now
         return a * -1;
