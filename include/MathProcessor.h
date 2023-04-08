@@ -2,6 +2,13 @@
 // Created by Peter Vaiciulis on 4/7/23.
 //
 #include <string>
+#include <vector>
+#include <array>
+#include <algorithm>
+#include <map>
+#include <cmath>
+#include <regex>
+#include <boost/regex.hpp>
 #include "Stack.h"
 
 #ifndef MATH_MATTERS_INPUT_H
@@ -36,10 +43,13 @@ namespace psv {
 
     void parseLastStep(const std::string& target_exp, const std::string& target_reduced);
 
+
 // Accessible Variables
-    std::vector<const char *> operatorLocations(const equation &eq);
+    extern std::vector<const char *> operatorLocations(const equation &eq);
     extern std::vector<std::string> steps;
     extern std::vector<const char*> invalid_characters;
+    extern const std::regex paren_no_op;
+    extern const boost::regex unary_minus;
 }
 
 #endif //MATH_MATTERS_INPUT_H

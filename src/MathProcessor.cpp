@@ -4,25 +4,16 @@
 
 #ifndef MATH_MATTERS_PROCESSOR_CPP
 #define MATH_MATTERS_PROCESSOR_CPP
-
-#include <vector>
-#include <array>
-#include <algorithm>
-#include <map>
-#include <cmath>
-#include <regex>
-#include "Stack.h"
 #include "MathProcessor.h"
-
-/*
- * This file contains functions that check the validity of an equation,
- * and also the functions that parse the equation into a stack of symbols.
- */
-
 
 namespace psv
 {
+const std::regex paren_no_op(R"(\(-?\d+\))");
+const boost::regex unary_minus(R"(((?<=[*\/\+\-^(])-(?=[\d\(])|^-))");
+
+// If I could do so simply, I would remove this right now
 using equation = std::string;
+
 static const std::array<char, 8> valid_ops = {'+', '-', '*', '/', '^', 'n'};
 static const std::array<char, 20> all_valid = {
         '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.',
@@ -83,9 +74,13 @@ void validScoping(const equation & eq) {
 }
 
 
+// Only used for binary operators
 bool validOperator(const char preceding, const char succeeding) {
-    if (isOperator(preceding) || (isOperator(succeeding) && succeeding != 'n'))
+    if(isOperator(preceding) || preceding == '(')
         return false;
+    if(isOperator(succeeding) && succeeding != 'n' || succeeding == ')')
+        return false;
+
 
     return true;
 }
@@ -139,19 +134,16 @@ float nonRpnEvaluate(const equation& eq) {
     steps.clear();
     equation eq_copy = eq;
 
+    eliminateWhiteSpace(eq_copy);
     // Use 'n' to represent unary minus
-    for(auto & c : eq_copy) {
-        if (c == '-' && (c == eq_copy[0] || isOperator(*(&c - 1)) && *(&c - 1) != ')'))
-            c = 'n';
-    }
+    // -3+ 4 * 2 / ( 1 - -5 ) ^ 2 ^ 3
+    eq_copy = boost::regex_replace(eq_copy, unary_minus, "n");
 
     // Quick scan for most issues before trying to evaluate
-    eliminateWhiteSpace(eq_copy);
     checkValidCharacters(eq_copy);
     validScoping(eq_copy);
     validOperators(eq_copy);
     last_step = eq_copy;
-    steps.push_back(std::regex_replace(last_step, std::regex("n"), "-"));
 
     psv::Stack<float> output;
     psv::Stack<char> operators;
@@ -194,9 +186,8 @@ float nonRpnEvaluate(const equation& eq) {
 // Gather and parse the last step (for each step) in the evaluation process
 void parseLastStep(const std::string& target_exp, const std::string& target_reduced) {
     // Remove parentheses that do not contain operators
-    std::regex re(R"(\(-?\d+\))");
     std::smatch match;
-    while (std::regex_search(last_step, match, re)) {
+    while (std::regex_search(last_step, match, paren_no_op)) {
         last_step.replace(last_step.find(match.str()), match.str().length(), match.str().substr(1, match.str().length() - 2));
     }
     // Replace target expression with target reduced
@@ -204,7 +195,6 @@ void parseLastStep(const std::string& target_exp, const std::string& target_redu
 
     last_step = last_step;
     // Replace special unary minus character ('n') with regular minus ('-')
-    last_step = std::regex_replace(last_step, std::regex("n"), "-");
     steps.push_back(last_step);
 }
 
@@ -216,7 +206,7 @@ void cycleStack(Stack<float> &output, Stack<char> &operators) {
     float b = output.pop();
     if(isUnary(op)){
         output.place(operateUnary(b, op));
-        target = op + std::to_string(static_cast<int>(b));
+        target = "n" + std::to_string(static_cast<int>(b));
     }else{ // isBinary
         float a = output.pop();
         output.place(operateBinary(a, b, op));

@@ -1,8 +1,8 @@
 #include <iostream>
 #include <iomanip>
 #include <vector>
+#include <boost/regex.hpp>
 #include <sstream>
-#include <regex>
 #include <spdlog/spdlog.h>
 #include "spdlog/sinks/basic_file_sink.h"
 #include "ftxui/dom/elements.hpp"
@@ -26,7 +26,7 @@ int main() {
 
     bool reveal_answer = false;
     bool show_steps = false;
-    bool show_warnings = false;
+    bool show_warnings = true;
     bool valid_input = true;
     bool anything_entered = false;
 
@@ -91,6 +91,9 @@ Component input_statement = Input(&statement, "Enter a Statement", _input_statem
         for(int i = 0; i < psv::steps.size()-1; i++) {
             std::string current_step = psv::steps[i];
             std::string next_step = psv::steps[i + 1];
+            current_step = boost::regex_replace(current_step, boost::regex(R"(n)"), "-");
+            next_step = boost::regex_replace(next_step, boost::regex(R"(n)"), "-");
+
             std::string before_diff;
             std::string diff;
             std::string after_diff;
