@@ -3,6 +3,7 @@
 //
 #include "catch2/catch_test_macros.hpp"
 #include <string>
+#include <boost/regex.hpp>
 
 #include "MathProcessor.h"
 #include "Stack.h"
@@ -322,3 +323,27 @@ TEST_CASE("Non-RPN Evaluate"){
     }
 }
 
+TEST_CASE("Boost Regex"){
+    using namespace boost;
+    SECTION("Replace Unary Minus"){
+        std::string next_to_operator = "3+ 4 * 2 / ( 1 - -5 ) ^ 2 ^ 3";
+        std::string at_start = "-3+ 4 * 2 / ( 1 -- 5 ) ^ 2 ^ 3";
+        std::string variety = "-3+4*2/(1--5)^2^3+-(10+12)-2";
+        psv::eliminateWhiteSpace(next_to_operator);
+        psv::eliminateWhiteSpace(at_start);
+        psv::eliminateWhiteSpace(variety);
+
+        boost::regex unary_minus(R"(((?<=[*\/\+\-^])-(?=[\d\(])|^-))");
+
+        next_to_operator = boost::regex_replace(next_to_operator, unary_minus, "n");
+        at_start = boost::regex_replace(at_start, unary_minus, "n");
+        variety = boost::regex_replace(variety, unary_minus, "n");
+
+        REQUIRE(next_to_operator == "3+4*2/(1-n5)^2^3");
+        REQUIRE(at_start == "n3+4*2/(1-n5)^2^3");
+        REQUIRE(variety == "n3+4*2/(1-n5)^2^3+n(10+12)-2");
+
+
+    }
+
+}
