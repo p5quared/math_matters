@@ -36,18 +36,35 @@ if(NOT ftxui_POPULATED)
   add_subdirectory(${ftxui_SOURCE_DIR} ${ftxui_BINARY_DIR} EXCLUDE_FROM_ALL)
 endif()
 
-FETCHCONTENT_DECLARE(
+FetchContent_Declare(
     spdlog
     GIT_REPOSITORY https://github.com/gabime/spdlog
     GIT_TAG        v1.x
 )
-FETCHCONTENT_MAKEAVAILABLE(spdlog)
+FetchContent_MakeAvailable(spdlog)
+
+FetchContent_Declare(
+    Boost
+    GIT_REPOSITORY https://github.com/boostorg/boost
+    GIT_TAG master
+)
+set(BOOST_INCLUDE_LIBRARIES thread filesystem system program_options)
+set(BOOST_ENABLE_CMAKE ON)
+FetchContent_MakeAvailable(Boost)
 
 
-target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
+target_link_libraries(tests
+    PRIVATE Catch2::Catch2WithMain
+    PRIVATE Boost::program_options
+    )
+
 target_link_libraries(math_matters
     PRIVATE ftxui::screen
     PRIVATE ftxui::dom
     PRIVATE ftxui::component # Not needed for this example.
     PRIVATE spdlog
+    PRIVATE Boost::thread
+    PRIVATE Boost::filesystem
+    PRIVATE Boost::system
+    PRIVATE Boost::program_options
     )
