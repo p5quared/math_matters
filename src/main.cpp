@@ -25,8 +25,8 @@ int main() {
     std::string warning_msg;
 
     bool reveal_answer = false;
-    bool show_steps = false;
-    bool show_warnings = true;
+    bool show_steps = true;
+    bool show_warnings = false;
     bool valid_input = true;
     bool anything_entered = false;
 

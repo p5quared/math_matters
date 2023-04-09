@@ -61,7 +61,7 @@ target_link_libraries(tests
 target_link_libraries(math_matters
     PRIVATE ftxui::screen
     PRIVATE ftxui::dom
-    PRIVATE ftxui::component # Not needed for this example.
+    PRIVATE ftxui::component
     PRIVATE spdlog
     PRIVATE Boost::thread
     PRIVATE Boost::filesystem
