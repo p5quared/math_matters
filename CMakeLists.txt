@@ -28,7 +28,7 @@ FetchContent_MakeAvailable(Catch2)
 
 FetchContent_Declare(ftxui
     GIT_REPOSITORY https://github.com/ArthurSonzogni/ftxui
-    GIT_TAG        master
+    GIT_TAG        main
 )
 FetchContent_GetProperties(ftxui)
 if(NOT ftxui_POPULATED)
