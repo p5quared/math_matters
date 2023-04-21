@@ -1,6 +1,6 @@
 # Math Matters
 A project dealing in _matters mathematical_.
-[![MacOS build status](https://github.com/p5quared/math_matters/cmake-build.yml/badge.svg)](https://github.com/p5quared/math_matters/cmake-build.yml)
+[![MacOS build status](https://github.com/p5quared/math_matters/cmake.yml/badge.svg)](https://github.com/p5quared/math_matters/cmake-build.yml)
 ![Screenshot](./misc/screenshot.png)
 
 ## Build
