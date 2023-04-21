@@ -75,6 +75,13 @@ void validScoping(const equation & eq) {
     }
 }
 
+// In the case that the entire statement is wrapped in a pair of parentheses
+// (x) -> x
+void lonelyParentheses(equation & eq_copy){
+    if (eq_copy[0] == '(' && eq_copy[eq_copy.size() - 1] == ')') {
+        eq_copy = eq_copy.substr(1, eq_copy.size() - 2);
+    }
+}
 
 // Only used for binary operators
 bool validOperator(const char preceding, const char succeeding) {
@@ -146,6 +153,7 @@ float nonRpnEvaluate(const equation& eq) {
     checkValidCharacters(eq_copy);
     validScoping(eq_copy);
     validOperators(eq_copy);
+    lonelyParentheses(eq_copy);
     last_step = eq_copy;
 
     psv::Stack<float> output;

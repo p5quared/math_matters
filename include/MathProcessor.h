@@ -43,6 +43,8 @@ namespace psv {
 
     void parseLastStep(const std::string& target_exp, const std::string& target_reduced);
 
+    void lonelyParentheses(equation &eq);
+
 
 // Accessible Variables
     extern std::vector<const char *> operatorLocations(const equation &eq);
