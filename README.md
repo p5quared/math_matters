@@ -1,9 +1,10 @@
 # Math Matters
 A project dealing in _matters mathematical_.
-[![MacOS build status](https://github.com/p5quared/math_matters/cmake.yml/badge.svg)](https://github.com/p5quared/math_matters/cmake-build.yml)
 ![Screenshot](./misc/screenshot.png)
 
+[![CMake Build Status](https://github.com/p5quared/math_matters/actions/workflows/cmake.yml/badge.svg)](https://https://github.com/p5quared/math_matters/actions/workflows/cmake.yml)
 ## Build
+
 This project uses [CMake](https://cmake.org/) to simplify the build process. To build the project, run the following 
 commands:
 ```bash
