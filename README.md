@@ -2,9 +2,7 @@
 A project dealing in _matters mathematical_.
 ![Screenshot](./misc/screenshot.png)
 
-[![CMake Build Status](https://github.com/p5quared/math_matters/actions/workflows/cmake.yml/badge.svg)](https://https://github.com/p5quared/math_matters/actions/workflows/cmake.yml)
-## Build
-
+## Build [![CMake Build Status](https://github.com/p5quared/math_matters/actions/workflows/cmake.yml/badge.svg)](https://https://github.com/p5quared/math_matters/actions/workflows/cmake.yml)
 This project uses [CMake](https://cmake.org/) to simplify the build process. To build the project, run the following 
 commands:
 ```bash
@@ -20,8 +18,8 @@ The following targets are available:
 
 #### Build Note:
 Because I used fetch_content to include all dependencies, you will need to have internet access to build the project,
-and it will probably take a **while** (just under 5 min. for me) to download all the dependencies and build them. I 
-would recommend chaining
+and it will probably take a **while** ([GH takes 6-9 min](https://github.com/p5quared/math_matters/actions/workflows/cmake.yml))
+to download all the dependencies and build them. I would recommend chaining
 the build commands together and watching a movie or something while you wait.
 
 
